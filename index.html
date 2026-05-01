@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Alarm</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f5f5;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --sub: #666;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --danger: #ef4444;
+      --border: #e0e0e0;
+      --shadow: 0 2px 12px rgba(0,0,0,.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111;
+        --surface: #1e1e1e;
+        --text: #f0f0f0;
+        --sub: #999;
+        --accent: #6366f1;
+        --accent-hover: #818cf8;
+        --danger: #f87171;
+        --border: #333;
+        --shadow: 0 2px 12px rgba(0,0,0,.4);
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    header h1 { font-size: 2rem; letter-spacing: -.02em; }
+    #clock {
+      font-size: 3.5rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      margin-top: .25rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 1.25rem;
+    }
+
+    .add-form {
+      display: flex;
+      gap: .75rem;
+      align-items: center;
+    }
+    .add-form label {
+      font-size: .8rem;
+      color: var(--sub);
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    #timeInput {
+      flex: 1;
+      font-size: 1.4rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: .5rem;
+      padding: .4rem .6rem;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+    }
+    #timeInput:focus { border-color: var(--accent); }
+    #addBtn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: .5rem;
+      padding: .5rem 1.1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      white-space: nowrap;
+    }
+    #addBtn:hover { background: var(--accent-hover); }
+
+    .section-title {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--sub);
+      margin-bottom: 1rem;
+    }
+
+    #alarmList { list-style: none; display: flex; flex-direction: column; gap: .75rem; }
+
+    .alarm-item {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .75rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: .75rem;
+      transition: opacity .2s;
+    }
+    .alarm-item.off { opacity: .45; }
+
+    .alarm-time {
+      flex: 1;
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* toggle switch */
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 26px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .toggle input:checked + .toggle-track { background: var(--accent); }
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform .2s;
+      pointer-events: none;
+    }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+
+    .del-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--sub);
+      font-size: 1.1rem;
+      padding: .2rem .4rem;
+      border-radius: .4rem;
+      transition: color .15s, background .15s;
+    }
+    .del-btn:hover { color: var(--danger); background: rgba(239,68,68,.1); }
+
+    .empty { text-align: center; color: var(--sub); padding: 1.5rem 0; font-size: .95rem; }
+
+    #permissionBanner {
+      background: #fef9c3;
+      color: #713f12;
+      border: 1px solid #fde68a;
+      border-radius: .75rem;
+      padding: .75rem 1rem;
+      font-size: .85rem;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 1rem;
+      display: none;
+      text-align: center;
+    }
+    @media (prefers-color-scheme: dark) {
+      #permissionBanner { background: #422006; color: #fde68a; border-color: #713f12; }
+    }
+    #permissionBanner button {
+      margin-left: .5rem;
+      background: #713f12;
+      color: #fff;
+      border: none;
+      border-radius: .4rem;
+      padding: .25rem .65rem;
+      font-size: .8rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Simple Alarm</h1>
+  <div id="clock">00:00:00</div>
+</header>
+
+<div id="permissionBanner">
+  通知を有効にするとアラームを見逃しません。
+  <button onclick="requestNotification()">通知を許可</button>
+</div>
+
+<div class="card">
+  <div class="add-form">
+    <label for="timeInput">時刻</label>
+    <input type="time" id="timeInput">
+    <button id="addBtn" onclick="addAlarm()">追加</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">アラーム一覧</div>
+  <ul id="alarmList"></ul>
+</div>
+
+<script>
+  let alarms = JSON.parse(localStorage.getItem('alarms') || '[]');
+  let ringing = false;
+  let audioCtx = null;
+  let ringInterval = null;
+
+  function save() {
+    localStorage.setItem('alarms', JSON.stringify(alarms));
+  }
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function beep() {
+    const ctx = getAudioCtx();
+    const freqs = [880, 1100, 880, 1100];
+    let t = ctx.currentTime;
+    freqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t + i * 0.15);
+      gain.gain.linearRampToValueAtTime(0.3, t + i * 0.15 + 0.02);
+      gain.gain.linearRampToValueAtTime(0, t + i * 0.15 + 0.13);
+      osc.start(t + i * 0.15);
+      osc.stop(t + i * 0.15 + 0.14);
+    });
+  }
+
+  function startRinging(alarm) {
+    if (ringing) return;
+    ringing = true;
+    beep();
+    ringInterval = setInterval(beep, 2500);
+
+    if (Notification.permission === 'granted') {
+      const n = new Notification('Simple Alarm', {
+        body: `${alarm.time} のアラームです！`,
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text y="28" font-size="28">⏰</text></svg>'
+      });
+      setTimeout(() => n.close(), 8000);
+    }
+
+    setTimeout(stopRinging, 30000);
+  }
+
+  function stopRinging() {
+    ringing = false;
+    clearInterval(ringInterval);
+  }
+
+  function render() {
+    const list = document.getElementById('alarmList');
+    list.innerHTML = '';
+    if (alarms.length === 0) {
+      list.innerHTML = '<li class="empty">アラームがありません</li>';
+      return;
+    }
+    alarms.sort((a, b) => a.time.localeCompare(b.time));
+    alarms.forEach((alarm, idx) => {
+      const li = document.createElement('li');
+      li.className = 'alarm-item' + (alarm.on ? '' : ' off');
+      li.innerHTML = `
+        <span class="alarm-time">${alarm.time}</span>
+        <label class="toggle" title="${alarm.on ? 'ON' : 'OFF'}">
+          <input type="checkbox" ${alarm.on ? 'checked' : ''} onchange="toggle(${idx})">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+        <button class="del-btn" onclick="remove(${idx})" title="削除">✕</button>
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  function addAlarm() {
+    const input = document.getElementById('timeInput');
+    const time = input.value;
+    if (!time) { input.focus(); return; }
+    if (alarms.some(a => a.time === time)) {
+      alert(`${time} のアラームはすでに登録されています`);
+      return;
+    }
+    alarms.push({ time, on: true });
+    save();
+    render();
+    input.value = '';
+    input.focus();
+  }
+
+  function toggle(idx) {
+    alarms[idx].on = !alarms[idx].on;
+    save();
+    render();
+  }
+
+  function remove(idx) {
+    alarms.splice(idx, 1);
+    save();
+    render();
+  }
+
+  function requestNotification() {
+    Notification.requestPermission().then(p => {
+      if (p === 'granted') document.getElementById('permissionBanner').style.display = 'none';
+    });
+  }
+
+  function updateClock() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('clock').textContent = `${hh}:${mm}:${ss}`;
+
+    if (ss === '00') {
+      const currentTime = `${hh}:${mm}`;
+      alarms.forEach(alarm => {
+        if (alarm.on && alarm.time === currentTime) startRinging(alarm);
+      });
+    }
+  }
+
+  // キーボードショートカット: Space/Enter でアラーム停止
+  document.addEventListener('keydown', e => {
+    if (ringing && (e.code === 'Space' || e.code === 'Enter')) {
+      e.preventDefault();
+      stopRinging();
+    }
+  });
+
+  // 通知許可バナー表示
+  if (Notification.permission === 'default') {
+    document.getElementById('permissionBanner').style.display = 'block';
+  }
+
+  // Enter キーでアラーム追加
+  document.getElementById('timeInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addAlarm();
+  });
+
+  render();
+  updateClock();
+  setInterval(updateClock, 1000);
+</script>
+
+</body>
+</html>
