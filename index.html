@@ -7,243 +7,413 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg: #f5f5f5;
-      --surface: #ffffff;
-      --text: #1a1a1a;
-      --sub: #666;
-      --accent: #4f46e5;
-      --accent-hover: #4338ca;
-      --danger: #ef4444;
-      --border: #e0e0e0;
-      --shadow: 0 2px 12px rgba(0,0,0,.08);
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #111;
-        --surface: #1e1e1e;
-        --text: #f0f0f0;
-        --sub: #999;
-        --accent: #6366f1;
-        --accent-hover: #818cf8;
-        --danger: #f87171;
-        --border: #333;
-        --shadow: 0 2px 12px rgba(0,0,0,.4);
-      }
-    }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--text);
       min-height: 100vh;
+      background: #0a0a1a;
+      color: #fff;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 2rem 1rem;
+      padding: 2.5rem 1rem 4rem;
+      overflow-x: hidden;
     }
 
-    header {
-      text-align: center;
-      margin-bottom: 2rem;
+    /* ── 背景グラデーションオーブ ── */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: .35;
+      pointer-events: none;
+      z-index: 0;
     }
-    header h1 { font-size: 2rem; letter-spacing: -.02em; }
-    #clock {
-      font-size: 3.5rem;
+    body::before {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #6366f1, #a855f7);
+      top: -150px; left: -100px;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, #06b6d4, #3b82f6);
+      bottom: -100px; right: -80px;
+    }
+
+    /* ── コンテンツ全体 ── */
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    /* ── ヘッダー & 時計 ── */
+    header { text-align: center; }
+
+    .app-title {
+      font-size: .75rem;
       font-weight: 700;
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.45);
+      margin-bottom: 1.5rem;
+    }
+
+    .clock-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 時計のリング */
+    .clock-ring {
+      position: absolute;
+      inset: -20px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,.1);
+    }
+    .clock-ring::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 1.5px solid transparent;
+      border-top-color: #818cf8;
+      border-right-color: #818cf8;
+      animation: spin 4s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #clock {
+      font-size: clamp(3rem, 10vw, 5.5rem);
+      font-weight: 800;
       letter-spacing: .04em;
       font-variant-numeric: tabular-nums;
-      color: var(--accent);
-      margin-top: .25rem;
+      background: linear-gradient(135deg, #e0e7ff 0%, #a5b4fc 50%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      padding: 2rem 1.5rem;
+      line-height: 1;
     }
 
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      box-shadow: var(--shadow);
-      padding: 1.5rem;
+    .date-label {
+      font-size: .85rem;
+      color: rgba(255,255,255,.4);
+      margin-top: .5rem;
+      letter-spacing: .05em;
+    }
+
+    /* ── グラスカード ── */
+    .glass {
       width: 100%;
-      max-width: 480px;
-      margin-bottom: 1.25rem;
+      background: rgba(255,255,255,.06);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 1.25rem;
+      padding: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.08);
     }
 
-    .add-form {
+    /* ── 通知バナー ── */
+    #permissionBanner {
+      display: none;
+      width: 100%;
+      background: rgba(234,179,8,.1);
+      border: 1px solid rgba(234,179,8,.3);
+      border-radius: 1rem;
+      padding: .75rem 1rem;
+      font-size: .85rem;
+      color: #fde68a;
+      text-align: center;
+    }
+    #permissionBanner button {
+      margin-left: .5rem;
+      background: rgba(234,179,8,.25);
+      color: #fde68a;
+      border: 1px solid rgba(234,179,8,.4);
+      border-radius: .5rem;
+      padding: .2rem .6rem;
+      font-size: .8rem;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    #permissionBanner button:hover { background: rgba(234,179,8,.4); }
+
+    /* ── 追加フォーム ── */
+    .form-label {
+      display: block;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.4);
+      margin-bottom: .75rem;
+    }
+    .add-row {
       display: flex;
       gap: .75rem;
-      align-items: center;
-    }
-    .add-form label {
-      font-size: .8rem;
-      color: var(--sub);
-      font-weight: 600;
-      letter-spacing: .05em;
-      text-transform: uppercase;
-      flex-shrink: 0;
+      align-items: stretch;
     }
     #timeInput {
       flex: 1;
-      font-size: 1.4rem;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      border-radius: .5rem;
-      padding: .4rem .6rem;
-      background: var(--bg);
-      color: var(--text);
+      font-size: 1.6rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: .75rem;
+      padding: .5rem .85rem;
+      color: #fff;
       outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      color-scheme: dark;
     }
-    #timeInput:focus { border-color: var(--accent); }
+    #timeInput:focus {
+      border-color: #818cf8;
+      box-shadow: 0 0 0 3px rgba(129,140,248,.2);
+    }
     #addBtn {
-      background: var(--accent);
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
       color: #fff;
       border: none;
-      border-radius: .5rem;
-      padding: .5rem 1.1rem;
+      border-radius: .75rem;
+      padding: .6rem 1.4rem;
       font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .15s;
-      white-space: nowrap;
-    }
-    #addBtn:hover { background: var(--accent-hover); }
-
-    .section-title {
-      font-size: .75rem;
       font-weight: 700;
-      letter-spacing: .08em;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s, box-shadow .15s;
+      box-shadow: 0 4px 15px rgba(99,102,241,.4);
+      white-space: nowrap;
+      letter-spacing: .02em;
+    }
+    #addBtn:hover { opacity: .9; box-shadow: 0 6px 20px rgba(99,102,241,.55); }
+    #addBtn:active { transform: scale(.97); }
+
+    /* ── アラームリスト ── */
+    .section-title {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .12em;
       text-transform: uppercase;
-      color: var(--sub);
+      color: rgba(255,255,255,.4);
       margin-bottom: 1rem;
     }
-
     #alarmList { list-style: none; display: flex; flex-direction: column; gap: .75rem; }
 
     .alarm-item {
       display: flex;
       align-items: center;
-      gap: .75rem;
-      padding: .75rem 1rem;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: .75rem;
-      transition: opacity .2s;
+      gap: 1rem;
+      padding: 1rem 1.1rem;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 1rem;
+      transition: all .25s;
+      position: relative;
+      overflow: hidden;
     }
-    .alarm-item.off { opacity: .45; }
+    .alarm-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, #6366f1, #a855f7);
+      border-radius: 3px 0 0 3px;
+      transition: opacity .25s;
+    }
+    .alarm-item.off { opacity: .4; }
+    .alarm-item.off::before { opacity: 0; }
 
+    .alarm-item.ringing {
+      border-color: rgba(250,204,21,.5);
+      background: rgba(250,204,21,.08);
+      animation: ring-pulse 1s ease-in-out infinite;
+    }
+    .alarm-item.ringing::before { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
+    @keyframes ring-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(250,204,21,.3); }
+      50%       { box-shadow: 0 0 0 8px rgba(250,204,21,.0); }
+    }
+
+    .alarm-info { flex: 1; min-width: 0; }
     .alarm-time {
-      flex: 1;
-      font-size: 1.6rem;
-      font-weight: 700;
-      letter-spacing: .03em;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: .02em;
       font-variant-numeric: tabular-nums;
+      line-height: 1;
     }
+    .alarm-status {
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-top: .2rem;
+      color: rgba(255,255,255,.35);
+    }
+    .alarm-item.off .alarm-status { color: rgba(255,255,255,.25); }
 
-    /* toggle switch */
+    /* トグルスイッチ */
     .toggle {
       position: relative;
-      width: 44px;
-      height: 26px;
+      width: 50px;
+      height: 28px;
       flex-shrink: 0;
     }
-    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
     .toggle-track {
       position: absolute;
       inset: 0;
-      background: var(--border);
-      border-radius: 26px;
+      background: rgba(255,255,255,.15);
+      border-radius: 28px;
       cursor: pointer;
-      transition: background .2s;
+      transition: background .25s;
+      border: 1px solid rgba(255,255,255,.1);
     }
-    .toggle input:checked + .toggle-track { background: var(--accent); }
+    .toggle input:checked + .toggle-track {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-color: transparent;
+    }
     .toggle-thumb {
       position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 20px;
-      height: 20px;
+      top: 3px; left: 3px;
+      width: 22px; height: 22px;
       background: #fff;
       border-radius: 50%;
-      transition: transform .2s;
+      transition: transform .25s cubic-bezier(.34,1.56,.64,1);
       pointer-events: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,.3);
     }
-    .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(22px); }
 
+    /* 削除ボタン */
     .del-btn {
-      background: none;
-      border: none;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: .6rem;
       cursor: pointer;
-      color: var(--sub);
-      font-size: 1.1rem;
-      padding: .2rem .4rem;
-      border-radius: .4rem;
-      transition: color .15s, background .15s;
+      color: rgba(255,255,255,.4);
+      font-size: 1rem;
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+      flex-shrink: 0;
     }
-    .del-btn:hover { color: var(--danger); background: rgba(239,68,68,.1); }
+    .del-btn:hover {
+      color: #f87171;
+      background: rgba(248,113,113,.12);
+      border-color: rgba(248,113,113,.3);
+    }
 
-    .empty { text-align: center; color: var(--sub); padding: 1.5rem 0; font-size: .95rem; }
+    .empty {
+      text-align: center;
+      color: rgba(255,255,255,.25);
+      padding: 2rem 0;
+      font-size: .9rem;
+    }
+    .empty-icon { font-size: 2rem; display: block; margin-bottom: .5rem; }
 
-    #permissionBanner {
-      background: #fef9c3;
-      color: #713f12;
-      border: 1px solid #fde68a;
-      border-radius: .75rem;
-      padding: .75rem 1rem;
-      font-size: .85rem;
-      width: 100%;
-      max-width: 480px;
-      margin-bottom: 1rem;
+    /* ── 鳴動中オーバーレイ ── */
+    #ringOverlay {
       display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0,0,0,.7);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
       text-align: center;
     }
-    @media (prefers-color-scheme: dark) {
-      #permissionBanner { background: #422006; color: #fde68a; border-color: #713f12; }
+    #ringOverlay.show { display: flex; }
+    .ring-emoji {
+      font-size: 5rem;
+      animation: ring-shake .5s ease-in-out infinite;
     }
-    #permissionBanner button {
-      margin-left: .5rem;
-      background: #713f12;
+    @keyframes ring-shake {
+      0%,100% { transform: rotate(-15deg); }
+      50%      { transform: rotate(15deg); }
+    }
+    #ringOverlay h2 { font-size: 1.5rem; font-weight: 800; }
+    #ringOverlay p  { color: rgba(255,255,255,.6); font-size: .9rem; }
+    #stopBtn {
+      background: linear-gradient(135deg, #f43f5e, #e11d48);
       color: #fff;
       border: none;
-      border-radius: .4rem;
-      padding: .25rem .65rem;
-      font-size: .8rem;
+      border-radius: 1rem;
+      padding: .9rem 2.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
       cursor: pointer;
+      box-shadow: 0 6px 24px rgba(244,63,94,.4);
+      transition: transform .1s, box-shadow .15s;
+      letter-spacing: .03em;
     }
+    #stopBtn:hover { box-shadow: 0 8px 28px rgba(244,63,94,.55); }
+    #stopBtn:active { transform: scale(.96); }
   </style>
 </head>
 <body>
 
-<header>
-  <h1>Simple Alarm</h1>
-  <div id="clock">00:00:00</div>
-</header>
-
-<div id="permissionBanner">
-  通知を有効にするとアラームを見逃しません。
-  <button onclick="requestNotification()">通知を許可</button>
+<!-- 鳴動中オーバーレイ -->
+<div id="ringOverlay">
+  <div class="ring-emoji">⏰</div>
+  <h2 id="ringTime">--:--</h2>
+  <p>アラームが鳴っています</p>
+  <button id="stopBtn" onclick="stopRinging()">停止</button>
 </div>
 
-<div class="card">
-  <div class="add-form">
-    <label for="timeInput">時刻</label>
-    <input type="time" id="timeInput">
-    <button id="addBtn" onclick="addAlarm()">追加</button>
+<div class="container">
+
+  <header>
+    <p class="app-title">Simple Alarm</p>
+    <div class="clock-wrap">
+      <div class="clock-ring"></div>
+      <div id="clock">00:00:00</div>
+    </div>
+    <p class="date-label" id="dateLabel"></p>
+  </header>
+
+  <div id="permissionBanner">
+    🔔 通知を有効にするとバックグラウンドでもアラームを受け取れます
+    <button onclick="requestNotification()">許可する</button>
   </div>
-</div>
 
-<div class="card">
-  <div class="section-title">アラーム一覧</div>
-  <ul id="alarmList"></ul>
+  <!-- 追加フォーム -->
+  <div class="glass">
+    <span class="form-label">アラームを追加</span>
+    <div class="add-row">
+      <input type="time" id="timeInput">
+      <button id="addBtn" onclick="addAlarm()">＋ 追加</button>
+    </div>
+  </div>
+
+  <!-- アラーム一覧 -->
+  <div class="glass">
+    <div class="section-title">アラーム一覧</div>
+    <ul id="alarmList"></ul>
+  </div>
+
 </div>
 
 <script>
+  const DAYS = ['日','月','火','水','木','金','土'];
   let alarms = JSON.parse(localStorage.getItem('alarms') || '[]');
   let ringing = false;
   let audioCtx = null;
   let ringInterval = null;
 
-  function save() {
-    localStorage.setItem('alarms', JSON.stringify(alarms));
-  }
+  function save() { localStorage.setItem('alarms', JSON.stringify(alarms)); }
 
   function getAudioCtx() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -252,50 +422,68 @@
 
   function beep() {
     const ctx = getAudioCtx();
-    const freqs = [880, 1100, 880, 1100];
+    const pattern = [880, 1100, 880, 1100, 660, 880];
     let t = ctx.currentTime;
-    freqs.forEach((freq, i) => {
+    pattern.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.type = 'sine';
       osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, t + i * 0.15);
-      gain.gain.linearRampToValueAtTime(0.3, t + i * 0.15 + 0.02);
-      gain.gain.linearRampToValueAtTime(0, t + i * 0.15 + 0.13);
-      osc.start(t + i * 0.15);
-      osc.stop(t + i * 0.15 + 0.14);
+      const start = t + i * 0.18;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.28, start + 0.02);
+      gain.gain.linearRampToValueAtTime(0, start + 0.16);
+      osc.start(start);
+      osc.stop(start + 0.17);
     });
   }
 
   function startRinging(alarm) {
     if (ringing) return;
     ringing = true;
+    document.getElementById('ringOverlay').classList.add('show');
+    document.getElementById('ringTime').textContent = alarm.time;
     beep();
-    ringInterval = setInterval(beep, 2500);
+    ringInterval = setInterval(beep, 2800);
 
     if (Notification.permission === 'granted') {
-      const n = new Notification('Simple Alarm', {
+      const n = new Notification('⏰ アラーム', {
         body: `${alarm.time} のアラームです！`,
         icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text y="28" font-size="28">⏰</text></svg>'
       });
       setTimeout(() => n.close(), 8000);
     }
 
-    setTimeout(stopRinging, 30000);
+    setTimeout(stopRinging, 60000);
   }
 
   function stopRinging() {
     ringing = false;
     clearInterval(ringInterval);
+    document.getElementById('ringOverlay').classList.remove('show');
+    document.querySelectorAll('.alarm-item').forEach(el => el.classList.remove('ringing'));
+  }
+
+  function timeUntil(time) {
+    const [h, m] = time.split(':').map(Number);
+    const now = new Date();
+    const target = new Date();
+    target.setHours(h, m, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    const diff = target - now;
+    const hh = Math.floor(diff / 3600000);
+    const mm = Math.floor((diff % 3600000) / 60000);
+    if (hh === 0) return `${mm}分後`;
+    return `${hh}時間${mm}分後`;
   }
 
   function render() {
     const list = document.getElementById('alarmList');
     list.innerHTML = '';
     if (alarms.length === 0) {
-      list.innerHTML = '<li class="empty">アラームがありません</li>';
+      list.innerHTML = '<li class="empty"><span class="empty-icon">🌙</span>アラームがありません</li>';
       return;
     }
     alarms.sort((a, b) => a.time.localeCompare(b.time));
@@ -303,13 +491,16 @@
       const li = document.createElement('li');
       li.className = 'alarm-item' + (alarm.on ? '' : ' off');
       li.innerHTML = `
-        <span class="alarm-time">${alarm.time}</span>
-        <label class="toggle" title="${alarm.on ? 'ON' : 'OFF'}">
-          <input type="checkbox" ${alarm.on ? 'checked' : ''} onchange="toggle(${idx})">
+        <div class="alarm-info">
+          <div class="alarm-time">${alarm.time}</div>
+          <div class="alarm-status">${alarm.on ? timeUntil(alarm.time) : 'オフ'}</div>
+        </div>
+        <label class="toggle" title="${alarm.on ? 'オン' : 'オフ'}">
+          <input type="checkbox" ${alarm.on ? 'checked' : ''} onchange="toggleAlarm(${idx})">
           <span class="toggle-track"></span>
           <span class="toggle-thumb"></span>
         </label>
-        <button class="del-btn" onclick="remove(${idx})" title="削除">✕</button>
+        <button class="del-btn" onclick="removeAlarm(${idx})" title="削除">✕</button>
       `;
       list.appendChild(li);
     });
@@ -320,26 +511,24 @@
     const time = input.value;
     if (!time) { input.focus(); return; }
     if (alarms.some(a => a.time === time)) {
-      alert(`${time} のアラームはすでに登録されています`);
+      input.style.borderColor = '#f87171';
+      setTimeout(() => input.style.borderColor = '', 1000);
       return;
     }
     alarms.push({ time, on: true });
-    save();
-    render();
+    save(); render();
     input.value = '';
     input.focus();
   }
 
-  function toggle(idx) {
+  function toggleAlarm(idx) {
     alarms[idx].on = !alarms[idx].on;
-    save();
-    render();
+    save(); render();
   }
 
-  function remove(idx) {
+  function removeAlarm(idx) {
     alarms.splice(idx, 1);
-    save();
-    render();
+    save(); render();
   }
 
   function requestNotification() {
@@ -355,15 +544,21 @@
     const ss = String(now.getSeconds()).padStart(2, '0');
     document.getElementById('clock').textContent = `${hh}:${mm}:${ss}`;
 
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    const dow = DAYS[now.getDay()];
+    document.getElementById('dateLabel').textContent = `${now.getFullYear()}年 ${month}月${day}日（${dow}）`;
+
     if (ss === '00') {
       const currentTime = `${hh}:${mm}`;
       alarms.forEach(alarm => {
         if (alarm.on && alarm.time === currentTime) startRinging(alarm);
       });
+      render(); // 「〇分後」表示を更新
     }
   }
 
-  // キーボードショートカット: Space/Enter でアラーム停止
+  // Space/Enter でアラーム停止
   document.addEventListener('keydown', e => {
     if (ringing && (e.code === 'Space' || e.code === 'Enter')) {
       e.preventDefault();
@@ -371,12 +566,10 @@
     }
   });
 
-  // 通知許可バナー表示
   if (Notification.permission === 'default') {
     document.getElementById('permissionBanner').style.display = 'block';
   }
 
-  // Enter キーでアラーム追加
   document.getElementById('timeInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') addAlarm();
   });
@@ -385,6 +578,5 @@
   updateClock();
   setInterval(updateClock, 1000);
 </script>
-
 </body>
 </html>
